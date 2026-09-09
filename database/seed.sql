@@ -1,7 +1,7 @@
 USE ticket_transaction_lab;
 INSERT IGNORE INTO users (name, email) VALUES ('User 1', 'user1@test.local'), ('User 2', 'user2@test.local');
-INSERT INTO shows (movie_name, screen, show_date, show_time, ticket_price)
-SELECT 'Avengers: Endgame', 'Screen 1', '2026-09-10', '10:00:00', 200.00
+INSERT INTO shows (movie_name, screen, show_date, show_time)
+SELECT 'Avengers: Endgame', 'Screen 1', '2026-09-10', '10:00:00'
 WHERE NOT EXISTS (
 	SELECT 1 FROM shows
 	WHERE movie_name = 'Avengers: Endgame'

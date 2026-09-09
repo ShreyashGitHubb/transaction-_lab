@@ -55,15 +55,15 @@ app.get('/api/shows/:showId/seats', async (_req, res, next) => {
 async function holdSeats({ seatIds, userId = 1 }) {
   const connection = await pool.getConnection()
   try {
-  await connection.beginTransaction()
-  const requested = [...new Set(seatIds)]
-  if (!requested.length) throw new Error('At least one seat is required')
+    await connection.beginTransaction()
+    const requested = [...new Set(seatIds)]
+    if (!requested.length) throw new Error('At least one seat is required')
 
-  const seatValues = requested.flatMap((id) => [id[0], Number(id.slice(1))])
-  const [lockedSeats] = await connection.query(
-  `SELECT seat_id, row_name, seat_number, status FROM seats
-   WHERE show_id = ? AND (row_name, seat_number) IN (${requested.map(() => '(?, ?)').join(',')})
-   ORDER BY seat_id FOR UPDATE`,
+    const seatValues = requested.flatMap((id) => [id[0], Number(id.slice(1))])
+    const [lockedSeats] = await connection.query(
+      `SELECT seat_id, row_name, seat_number, status FROM seats
+       WHERE show_id = ? AND (row_name, seat_number) IN (${requested.map(() => '(?, ?)').join(',')})
+       ORDER BY seat_id FOR UPDATE`,
       [showId, ...seatValues],
     )
     const unavailable = lockedSeats.filter((seat) => seat.status !== 'AVAILABLE')
@@ -75,9 +75,9 @@ async function holdSeats({ seatIds, userId = 1 }) {
     const [booking] = await connection.query(
       'INSERT INTO bookings (user_id, show_id, booking_status, total_amount) VALUES (?, ?, ?, ?)',
       [userId, showId, 'PENDING', requested.length * seatPrice],
-  )
-  const bookingId = booking.insertId
-  await connection.query(
+    )
+    const bookingId = booking.insertId
+    await connection.query(
       `INSERT INTO booking_seats (booking_id, seat_id) VALUES ${lockedSeats.map(() => '(?, ?)').join(',')}`,
       lockedSeats.flatMap((seat) => [bookingId, seat.seat_id]),
     )
@@ -107,8 +107,8 @@ async function completePayment({ bookingId, transactionId, result }) {
     const [bookingRows] = await connection.query(
       `SELECT b.booking_id, b.booking_status, bs.seat_id, s.row_name, s.seat_number, s.status
        FROM bookings b JOIN booking_seats bs ON bs.booking_id = b.booking_id
-  JOIN seats s ON s.seat_id = bs.seat_id
-  WHERE b.booking_id = ? FOR UPDATE`,
+       JOIN seats s ON s.seat_id = bs.seat_id
+       WHERE b.booking_id = ? FOR UPDATE`,
       [bookingId],
     )
     if (!bookingRows.length || bookingRows.some((row) => row.status !== 'HELD')) {
@@ -117,9 +117,9 @@ async function completePayment({ bookingId, transactionId, result }) {
     }
 
     const isSuccess = result === 'SUCCESS'
-  const status = isSuccess ? 'BOOKED' : 'AVAILABLE'
-  const bookingStatus = isSuccess ? 'CONFIRMED' : 'FAILED'
-  const transactionStatus = isSuccess ? 'SUCCESS' : 'ROLLED_BACK'
+    const status = isSuccess ? 'BOOKED' : 'AVAILABLE'
+    const bookingStatus = isSuccess ? 'CONFIRMED' : 'FAILED'
+    const transactionStatus = isSuccess ? 'SUCCESS' : 'ROLLED_BACK'
     const failureType = isSuccess ? 'NONE' : result === 'TIMEOUT' ? 'TIMEOUT' : 'PAYMENT_FAILURE'
     await connection.query(
       `UPDATE seats SET status = ?, hold_expires_at = NULL WHERE seat_id IN (${bookingRows.map(() => '?').join(',')})`,
@@ -129,9 +129,9 @@ async function completePayment({ bookingId, transactionId, result }) {
     await connection.query(
       'UPDATE transactions SET transaction_status = ?, failure_type = ?, completed_at = NOW() WHERE transaction_id = ?',
       [transactionStatus, failureType, transactionId],
-  )
-  await connection.commit()
-  return { ok: isSuccess, result, bookingId, transactionId, seatIds: bookingRows.map((row) => `${row.row_name || ''}${row.seat_number || ''}`) }
+    )
+    await connection.commit()
+    return { ok: isSuccess, result, bookingId, transactionId, seatIds: bookingRows.map((row) => `${row.row_name}${row.seat_number}`) }
   } catch (error) {
     await connection.rollback()
     throw error
@@ -149,9 +149,9 @@ io.on('connection', async (socket) => {
 
   socket.on('hold_seats', async (payload, callback) => {
     try {
-  const result = await holdSeats(payload)
-  if (result.ok) io.emit('seat_snapshot', await getSeatSnapshot())
-  socket.emit('booking_result', result)
+      const result = await holdSeats(payload)
+      if (result.ok) io.emit('seat_snapshot', await getSeatSnapshot())
+      socket.emit('booking_result', result)
       if (callback) callback(result)
     } catch (error) {
       socket.emit('server_error', { message: error.message })

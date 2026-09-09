@@ -29,17 +29,15 @@ function App() {
         setBookingId(result.bookingId)
         setTransactionId(result.transactionId)
         setScreen('payment')
-      }
-      else { setScreen('conflict'); setSelected([]) }
+      } else { setScreen('conflict'); setSelected([]) }
     })
     socket.on('payment_result', (result) => {
       if (result.ok) setScreen('success')
-      else { setScreen('failure') }
+      else setScreen('failure')
     })
     return () => socket.removeAllListeners()
   }, [])
 
-  const selectedSeats = selected.map((id) => seats[id]).filter(Boolean)
   const total = selected.length * 200
   const toggleSeat = (id) => {
     if (seats[id]?.status !== 'AVAILABLE' || screen !== 'booking') return

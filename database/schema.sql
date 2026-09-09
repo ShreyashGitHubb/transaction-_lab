@@ -14,7 +14,6 @@ CREATE TABLE shows (
   screen VARCHAR(80) NOT NULL,
   show_date DATE NOT NULL,
   show_time TIME NOT NULL,
-  ticket_price DECIMAL(10,2) NOT NULL DEFAULT 200.00,
   UNIQUE KEY uq_show_instance (movie_name, screen, show_date, show_time)
 ) ENGINE=InnoDB;
 
@@ -59,17 +58,5 @@ CREATE TABLE transactions (
   FOREIGN KEY (booking_id) REFERENCES bookings(booking_id)
 ) ENGINE=InnoDB;
 
-CREATE TABLE transaction_logs (
-  log_id BIGINT PRIMARY KEY AUTO_INCREMENT,
-  transaction_id BIGINT NOT NULL,
-  event_type ENUM('BEGIN','LOCK_REQUESTED','LOCK_ACQUIRED','SEAT_HELD','PAYMENT_STARTED','PAYMENT_SUCCESS','PAYMENT_FAILED','CONFLICT','ROLLBACK','COMMIT','HOLD_EXPIRED') NOT NULL,
-  seat_id BIGINT NULL,
-  message VARCHAR(255) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (transaction_id) REFERENCES transactions(transaction_id),
-  FOREIGN KEY (seat_id) REFERENCES seats(seat_id)
-) ENGINE=InnoDB;
-
 CREATE INDEX idx_seats_show_status ON seats(show_id, status);
 CREATE INDEX idx_transactions_status ON transactions(transaction_status);
-CREATE INDEX idx_transaction_logs_transaction ON transaction_logs(transaction_id, created_at);
