@@ -1,0 +1,20 @@
+{
+  "name": "concurrent-ticket-booking",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "server": "node server/server.js",
+    "dev": "concurrently \"node server/server.js\" \"npm --prefix client run dev\"",
+    "install:all": "npm install && npm --prefix client install"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^4.21.2",
+    "mysql2": "^3.24.4",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
