@@ -91,7 +91,7 @@ SHOW TABLES;
 EXIT;
 ```
 
-At this point, `SHOW TABLES` will be empty because the schema has not been loaded yet.
+At this point, `SHOW TABLES` may be empty because the schema has not been loaded yet.
 
 ## 6. Load the project schema
 
@@ -170,7 +170,7 @@ Terminal 2 will continue. This is the database behavior the project demonstrates
 
 ## 9. Application connection settings
 
-When the server is switched from the current in-memory demo to MySQL, use these settings:
+The MySQL-backed server uses these settings:
 
 ```text
 DB_HOST=127.0.0.1
@@ -180,21 +180,17 @@ DB_USER=ticket_app
 DB_PASSWORD=YourStrongPassword123!
 ```
 
-Create a local `.env` file in the project root or in `server/`, depending on where the database connection module reads it. Never commit this file or put the password in frontend code.
+Create a local `.env` file in the project root. Never commit this file or put the password in frontend code.
 
-The Node.js MySQL driver will be installed with:
+The project already includes `mysql2` and `dotenv` in `package.json`. Install them with the normal project command:
 
 ```bash
-npm install mysql2 dotenv
+npm run install:all
 ```
 
-A connection pool should use these values and the booking service should perform the seat operation with `SELECT ... FOR UPDATE` inside a transaction.
+The live server uses a MySQL connection pool and performs seat allocation with `SELECT ... FOR UPDATE` inside a transaction. The frontend uses Socket.IO to receive committed seat snapshots.
 
-## 10. Important current-project note
-
-The first runnable UI demo currently stores seats in memory inside `server/server.js`. It is useful for demonstrating two browser tabs immediately, but it does not yet read or write MySQL.
-
-The database is prepared by this guide. The next implementation step is to replace that in-memory repository with a `mysql2` connection pool and transaction service. The SQL schema is already prepared for that change.
+The server defaults are defined in [`.env.example`](.env.example). Copy it to `.env` if you need to override the defaults.
 
 ## Common fixes
 

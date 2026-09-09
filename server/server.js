@@ -17,12 +17,24 @@ app.use(express.json())
 
 async function getSeatSnapshot() {
   const [rows] = await pool.query(
-    'SELECT row_name, seat_number, status FROM seats WHERE show_id = ? ORDER BY row_name, seat_number',
+    `SELECT s.row_name, s.seat_number, s.status, b.booking_id, u.user_id, u.name AS user_name
+     FROM seats s
+     LEFT JOIN booking_seats bs ON bs.seat_id = s.seat_id
+     LEFT JOIN bookings b ON b.booking_id = bs.booking_id
+       AND b.booking_status IN ('PENDING', 'CONFIRMED')
+     LEFT JOIN users u ON u.user_id = b.user_id
+     WHERE s.show_id = ? ORDER BY s.row_name, s.seat_number`,
     [showId],
   )
   return Object.fromEntries(rows.map((seat) => {
     const id = `${seat.row_name}${seat.seat_number}`
-    return [id, { id, status: seat.status }]
+    return [id, {
+      id,
+      status: seat.status,
+      bookingId: seat.booking_id || null,
+      userId: seat.user_id || null,
+      userName: seat.user_name || null,
+    }]
   }))
 }
 
@@ -52,10 +64,37 @@ app.get('/api/shows/:showId/seats', async (_req, res, next) => {
   }
 })
 
+app.post('/api/demo/clear-seats', async (_req, res, next) => {
+  try {
+    await pool.query(
+      `UPDATE seats SET status = 'AVAILABLE', hold_expires_at = NULL WHERE show_id = ?`,
+      [showId],
+    )
+    await pool.query(
+      `UPDATE bookings b
+       JOIN booking_seats bs ON bs.booking_id = b.booking_id
+       JOIN seats s ON s.seat_id = bs.seat_id
+       SET b.booking_status = 'CANCELLED'
+       WHERE b.show_id = ? AND b.booking_status IN ('PENDING', 'CONFIRMED')`,
+      [showId],
+    )
+    const seats = await getSeatSnapshot()
+    io.emit('seat_snapshot', seats)
+    res.json({ ok: true, seats })
+  } catch (error) {
+    next(error)
+  }
+})
+
 async function holdSeats({ seatIds, userId = 1 }) {
   const connection = await pool.getConnection()
   try {
     await connection.beginTransaction()
+    await connection.query(
+      `INSERT INTO users (user_id, name, email) VALUES (?, ?, ?)
+       ON DUPLICATE KEY UPDATE name = VALUES(name)`,
+      [userId, `Demo User ${userId}`, `demo-${userId}@ticket-lab.local`],
+    )
     const requested = [...new Set(seatIds)]
     if (!requested.length) throw new Error('At least one seat is required')
 
@@ -100,7 +139,7 @@ async function holdSeats({ seatIds, userId = 1 }) {
   }
 }
 
-async function completePayment({ bookingId, transactionId, result }) {
+async function completePayment({ bookingId, transactionId, userId = 1, result }) {
   const connection = await pool.getConnection()
   try {
     await connection.beginTransaction()
@@ -108,8 +147,8 @@ async function completePayment({ bookingId, transactionId, result }) {
       `SELECT b.booking_id, b.booking_status, bs.seat_id, s.row_name, s.seat_number, s.status
        FROM bookings b JOIN booking_seats bs ON bs.booking_id = b.booking_id
        JOIN seats s ON s.seat_id = bs.seat_id
-       WHERE b.booking_id = ? FOR UPDATE`,
-      [bookingId],
+      WHERE b.booking_id = ? AND b.user_id = ? FOR UPDATE`,
+          [bookingId, userId],
     )
     if (!bookingRows.length || bookingRows.some((row) => row.status !== 'HELD')) {
       await connection.rollback()
