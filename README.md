@@ -52,6 +52,8 @@ mysql --version
 
 For the complete database setup, see [MYSQL_SETUP.md](MYSQL_SETUP.md).
 
+For classroom LAN deployment and internet/VPS deployment, see [DEPLOYMENT.md](DEPLOYMENT.md).
+
 ### 3. Create the database and application user
 
 ```bash
@@ -79,6 +81,11 @@ mysql -u ticket_app -p < database/seed.sql
 
 The seed creates one show and 80 seats.
 
+For Railway's SQL console, you can paste the complete single-file setup instead:
+
+```text
+database/railway_setup.sql
+```
 ### 5. Configure the server
 
 The project defaults match the setup above. To configure them explicitly:
@@ -88,6 +95,8 @@ cp .env.example .env
 ```
 
 Edit `.env` if your MySQL password or host differs. Never commit `.env`.
+
+On Railway, set `MYSQL_URL` to the MySQL service's private connection URL. The backend automatically uses it before local `DB_*` values.
 
 ### 6. Install Node dependencies
 
